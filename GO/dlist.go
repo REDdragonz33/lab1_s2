@@ -1,133 +1,99 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 type DNode struct {
-	Data string
-	Prev *DNode
-	Next *DNode
+	Value string
+	Prev  *DNode
+	Next  *DNode
 }
 
 type DList struct {
-	head *DNode
-	tail *DNode
+	Head *DNode
+	Tail *DNode
 }
 
-func NewDList() *DList { return &DList{} }
-
-func (l *DList) GetType() byte { return 'L' }
-
-func (l *DList) insertHead(val string) {
-	n := &DNode{Data: val, Next: l.head}
-	if l.head != nil { l.head.Prev = n } else { l.tail = n }
-	l.head = n
+func NewDList() *DList {
+	return &DList{}
 }
 
-func (l *DList) insertTail(val string) {
-	n := &DNode{Data: val, Prev: l.tail}
-	if l.tail != nil { l.tail.Next = n } else { l.head = n }
-	l.tail = n
+func (l *DList) InsertHead(val string) {
+	newNode := &DNode{Value: val, Next: l.Head}
+	if l.Head != nil {
+		l.Head.Prev = newNode
+	} else {
+		l.Tail = newNode
+	}
+	l.Head = newNode
 }
 
-func (l *DList) Execute(cmd string, args []string) {
-	switch cmd {
-	case "LPUSH":
-		if len(args) < 2 { fmt.Println("LPUSH: missing args"); return }
-		mode, val := args[0], args[1]
-		switch mode {
-		case "HEAD": l.insertHead(val)
-		case "TAIL": l.insertTail(val)
-		case "AFTER":
-			if len(args) < 3 { return }
-			cur := l.head
-			for cur != nil && cur.Data != args[2] { cur = cur.Next }
-			if cur != nil {
-				n := &DNode{Data: val, Prev: cur, Next: cur.Next}
-				if cur.Next != nil { cur.Next.Prev = n } else { l.tail = n }
-				cur.Next = n
-			}
-		case "BEFORE":
-			if len(args) < 3 { return }
-			cur := l.head
-			for cur != nil && cur.Data != args[2] { cur = cur.Next }
-			if cur != nil {
-				n := &DNode{Data: val, Prev: cur.Prev, Next: cur}
-				if cur.Prev != nil { cur.Prev.Next = n } else { l.head = n }
-				cur.Prev = n
-			}
+func (l *DList) InsertTail(val string) {
+	newNode := &DNode{Value: val, Prev: l.Tail}
+	if l.Tail != nil {
+		l.Tail.Next = newNode
+	} else {
+		l.Head = newNode
+	}
+	l.Tail = newNode
+}
+
+func (l *DList) InsertAfter(target, val string) {
+	curr := l.Head
+	for curr != nil && curr.Value != target {
+		curr = curr.Next
+	}
+	if curr != nil {
+		newNode := &DNode{Value: val, Prev: curr, Next: curr.Next}
+		if curr.Next != nil {
+			curr.Next.Prev = newNode
+		} else {
+			l.Tail = newNode
 		}
-	case "LDEL":
-		if len(args) < 1 { return }
-		
-		// Поддержка новых режимов: LDEL имя AFTER значение
-		if len(args) >= 2 {
-			mode := args[0]
-			val := args[1]
-			if mode == "AFTER" {
-				// Удаление после
-				cur := l.head
-				for cur != nil && cur.Data != val { cur = cur.Next }
-				if cur != nil && cur.Next != nil {
-					temp := cur.Next
-					cur.Next = temp.Next
-					if temp.Next != nil { temp.Next.Prev = cur } else { l.tail = cur }
-				}
-				return
-			} else if mode == "BEFORE" {
-				// Удаление перед
-				cur := l.head
-				for cur != nil && cur.Data != val { cur = cur.Next }
-				if cur != nil && cur.Prev != nil {
-					temp := cur.Prev
-					cur.Prev = temp.Prev
-					if temp.Prev != nil { temp.Prev.Next = cur } else { l.head = cur }
-				}
-				return
-			}
-		}
+		curr.Next = newNode
+	}
+}
 
-		// Обычное удаление по значению
-		val := args[0]
-		cur := l.head
-		for cur != nil && cur.Data != val { cur = cur.Next }
-		if cur != nil {
-			if cur.Prev != nil { cur.Prev.Next = cur.Next } else { l.head = cur.Next }
-			if cur.Next != nil { cur.Next.Prev = cur.Prev } else { l.tail = cur.Prev }
+func (l *DList) InsertBefore(target, val string) {
+	curr := l.Head
+	for curr != nil && curr.Value != target {
+		curr = curr.Next
+	}
+	if curr != nil {
+		newNode := &DNode{Value: val, Prev: curr.Prev, Next: curr}
+		if curr.Prev != nil {
+			curr.Prev.Next = newNode
+		} else {
+			l.Head = newNode
+		}
+		curr.Prev = newNode
+	}
+}
+
+func (l *DList) Remove(val string) {
+	curr := l.Head
+	for curr != nil && curr.Value != val {
+		curr = curr.Next
+	}
+	if curr != nil {
+		if curr.Prev != nil {
+			curr.Prev.Next = curr.Next
+		} else {
+			l.Head = curr.Next
+		}
+		if curr.Next != nil {
+			curr.Next.Prev = curr.Prev
+		} else {
+			l.Tail = curr.Prev
 		}
 	}
 }
 
 func (l *DList) Print() {
-	fmt.Print("DList: ")
-	cur := l.head
-	for cur != nil {
-		fmt.Print(cur.Data, " <-> ")
-		cur = cur.Next
+	fmt.Printf("DList: ")
+	curr := l.Head
+	for curr != nil {
+		fmt.Printf("%s <-> ", curr.Value)
+		curr = curr.Next
 	}
-	fmt.Println("nullptr")
-}
-
-func (l *DList) Save() string {
-	var vals []string
-	cur := l.head
-	for cur != nil {
-		vals = append(vals, cur.Data)
-		cur = cur.Next
-	}
-	return fmt.Sprintf("%d %s", len(vals), strings.Join(vals, " "))
-}
-
-func (l *DList) Load(data string) {
-	l.head = nil
-	l.tail = nil
-	parts := strings.Fields(data)
-	if len(parts) == 0 { return }
-	var count int
-	fmt.Sscanf(parts[0], "%d", &count)
-	for i := 1; i <= count && i < len(parts); i++ {
-		l.insertTail(parts[i])
-	}
+	fmt.Println("nil")
 }

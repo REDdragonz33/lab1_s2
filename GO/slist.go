@@ -1,157 +1,99 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
+
+type SNode struct {
+	Value string
+	Next  *SNode
+}
 
 type SList struct {
-	head *Node
-	tail *Node
+	Head *SNode
+	Tail *SNode
 }
 
-func NewSList() *SList { return &SList{} }
-
-func (l *SList) GetType() byte { return 'F' }
-
-func (l *SList) insertHead(val string) {
-	n := NewNode(val, l.head)
-	l.head = n
-	if l.tail == nil { l.tail = n }
+func NewSList() *SList {
+	return &SList{}
 }
 
-func (l *SList) insertTail(val string) {
-	n := NewNode(val, nil)
-	if l.tail != nil {
-		l.tail.Next = n
-	} else {
-		l.head = n
+func (l *SList) InsertHead(val string) {
+	newNode := &SNode{Value: val, Next: l.Head}
+	l.Head = newNode
+	if l.Tail == nil {
+		l.Tail = newNode
 	}
-	l.tail = n
 }
 
-func (l *SList) Execute(cmd string, args []string) {
-	switch cmd {
-	case "FPUSH":
-		if len(args) < 2 { fmt.Println("FPUSH: missing args"); return }
-		mode, val := args[0], args[1]
-		switch mode {
-		case "HEAD":
-			l.insertHead(val)
-		case "TAIL":
-			l.insertTail(val)
-		case "AFTER":
-			if len(args) < 3 { return }
-			cur := l.head
-			for cur != nil && cur.Data != args[2] { cur = cur.Next }
-			if cur != nil {
-				n := NewNode(val, cur.Next)
-				cur.Next = n
-				if cur == l.tail { l.tail = n }
-			}
-		case "BEFORE":
-			if len(args) < 3 { return }
-			if l.head != nil && l.head.Data == args[2] { l.insertHead(val); return }
-			cur := l.head
-			for cur != nil && cur.Next != nil && cur.Next.Data != args[2] { cur = cur.Next }
-			if cur != nil && cur.Next != nil {
-				cur.Next = NewNode(val, cur.Next)
-			}
-		}
-	case "FDEL":
-		if len(args) < 1 { return }
-		
-		// Поддержка новых режимов: FDEL имя AFTER значение
-		if len(args) >= 2 {
-			mode := args[0]
-			val := args[1]
-			if mode == "AFTER" {
-				// Удаление после
-				cur := l.head
-				for cur != nil && cur.Data != val { cur = cur.Next }
-				if cur != nil && cur.Next != nil {
-					if cur.Next == l.tail { l.tail = cur }
-					cur.Next = cur.Next.Next
-				}
-				return
-			} else if mode == "BEFORE" {
-				// Удаление перед
-				if l.head == nil || l.head.Next == nil { return }
-				if l.head.Next.Data == val {
-					l.head = l.head.Next
-					return
-				}
-				cur := l.head
-				for cur.Next != nil && cur.Next.Next != nil {
-					if cur.Next.Next.Data == val {
-						cur.Next = cur.Next.Next
-						return
-					}
-					cur = cur.Next
-				}
-				return
-			}
-		}
+func (l *SList) InsertTail(val string) {
+	newNode := &SNode{Value: val}
+	if l.Tail != nil {
+		l.Tail.Next = newNode
+	} else {
+		l.Head = newNode
+	}
+	l.Tail = newNode
+}
 
-		// Обычное удаление по значению
-		val := args[0]
-		if l.head == nil { return }
-		if l.head.Data == val {
-			l.head = l.head.Next
-			if l.head == nil { l.tail = nil }
-			return
+func (l *SList) InsertAfter(target, val string) {
+	curr := l.Head
+	for curr != nil && curr.Value != target {
+		curr = curr.Next
+	}
+	if curr != nil {
+		newNode := &SNode{Value: val, Next: curr.Next}
+		curr.Next = newNode
+		if curr == l.Tail {
+			l.Tail = newNode
 		}
-		cur := l.head
-		for cur.Next != nil && cur.Next.Data != val { cur = cur.Next }
-		if cur.Next != nil {
-			if cur.Next == l.tail { l.tail = cur }
-			cur.Next = cur.Next.Next
+	}
+}
+
+func (l *SList) InsertBefore(target, val string) {
+	if l.Head == nil {
+		return
+	}
+	if l.Head.Value == target {
+		l.InsertHead(val)
+		return
+	}
+	curr := l.Head
+	for curr.Next != nil && curr.Next.Value != target {
+		curr = curr.Next
+	}
+	if curr.Next != nil {
+		curr.Next = &SNode{Value: val, Next: curr.Next}
+	}
+}
+
+func (l *SList) Remove(val string) {
+	if l.Head == nil {
+		return
+	}
+	if l.Head.Value == val {
+		l.Head = l.Head.Next
+		if l.Head == nil {
+			l.Tail = nil
 		}
-		
-	case "FGET":
-		// Поиск по значению (выводит TRUE/FALSE)
-		if len(args) < 1 { return }
-		val := args[0]
-		cur := l.head
-		for cur != nil {
-			if cur.Data == val {
-				fmt.Println("TRUE")
-				return
-			}
-			cur = cur.Next
+		return
+	}
+	curr := l.Head
+	for curr.Next != nil && curr.Next.Value != val {
+		curr = curr.Next
+	}
+	if curr.Next != nil {
+		curr.Next = curr.Next.Next
+		if curr.Next == nil {
+			l.Tail = curr
 		}
-		fmt.Println("FALSE")
 	}
 }
 
 func (l *SList) Print() {
-	fmt.Print("SList: ")
-	cur := l.head
-	for cur != nil {
-		fmt.Print(cur.Data, " -> ")
-		cur = cur.Next
+	fmt.Printf("SList: ")
+	curr := l.Head
+	for curr != nil {
+		fmt.Printf("%s -> ", curr.Value)
+		curr = curr.Next
 	}
-	fmt.Println("nullptr")
-}
-
-func (l *SList) Save() string {
-	var vals []string
-	cur := l.head
-	for cur != nil {
-		vals = append(vals, cur.Data)
-		cur = cur.Next
-	}
-	return fmt.Sprintf("%d %s", len(vals), strings.Join(vals, " "))
-}
-
-func (l *SList) Load(data string) {
-	l.head = nil
-	l.tail = nil
-	parts := strings.Fields(data)
-	if len(parts) == 0 { return }
-	var count int
-	fmt.Sscanf(parts[0], "%d", &count)
-	for i := 1; i <= count && i < len(parts); i++ {
-		l.insertTail(parts[i])
-	}
+	fmt.Println("nil")
 }

@@ -2,7 +2,7 @@
 #define TREE_H
 
 #include "istructure.h"
-#include "queue.h" // Используем вашу очередь для BFS
+#include "queue.h" 
 #include <iostream>
 #include <string>
 using namespace std;

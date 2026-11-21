@@ -1,57 +1,42 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 )
 
-type Stack struct {
-	head *Node
+type StackNode struct {
+	Value string
+	Next  *StackNode
 }
 
-func NewStack() *Stack { return &Stack{} }
+type Stack struct {
+	Top *StackNode
+}
 
-func (s *Stack) GetType() byte { return 'S' }
+func NewStack() *Stack {
+	return &Stack{}
+}
 
-func (s *Stack) Execute(cmd string, args []string) {
-	switch cmd {
-	case "SPUSH":
-		if len(args) < 1 { fmt.Println("SPUSH: missing value"); return }
-		s.head = NewNode(args[0], s.head)
-	case "SPOP":
-		if s.head == nil { fmt.Println("EMPTY"); return }
-		fmt.Println(s.head.Data)
-		s.head = s.head.Next
+func (s *Stack) Push(val string) {
+	s.Top = &StackNode{Value: val, Next: s.Top}
+}
+
+func (s *Stack) Pop() (string, error) {
+	if s.Top == nil {
+		return "", errors.New("stack is empty")
 	}
+	val := s.Top.Value
+	s.Top = s.Top.Next
+	return val, nil
 }
 
 func (s *Stack) Print() {
-	fmt.Print("Stack (top -> bottom): ")
-	cur := s.head
-	for cur != nil {
-		fmt.Print(cur.Data, " ")
-		cur = cur.Next
+	fmt.Printf("Stack (top): ")
+	curr := s.Top
+	for curr != nil {
+		fmt.Printf("%s ", curr.Value)
+		curr = curr.Next
 	}
 	fmt.Println()
-}
-
-func (s *Stack) Save() string {
-	var vals []string
-	cur := s.head
-	for cur != nil {
-		vals = append(vals, cur.Data)
-		cur = cur.Next
-	}
-	return fmt.Sprintf("%d %s", len(vals), strings.Join(vals, " "))
-}
-
-func (s *Stack) Load(data string) {
-	s.head = nil
-	parts := strings.Fields(data)
-	if len(parts) == 0 { return }
-	var count int
-	fmt.Sscanf(parts[0], "%d", &count)
-	for i := 1; i <= count && i < len(parts); i++ {
-		s.head = NewNode(parts[i], s.head)
-	}
 }

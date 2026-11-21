@@ -1,66 +1,52 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 )
 
-type Queue struct {
-	head *Node
-	tail *Node
+type QueueNode struct {
+	Value string
+	Next  *QueueNode
 }
 
-func NewQueue() *Queue { return &Queue{} }
+type Queue struct {
+	Head *QueueNode
+	Tail *QueueNode
+}
 
-func (q *Queue) GetType() byte { return 'Q' }
+func NewQueue() *Queue {
+	return &Queue{}
+}
 
-func (q *Queue) Execute(cmd string, args []string) {
-	switch cmd {
-	case "QPUSH":
-		if len(args) < 1 { fmt.Println("QPUSH: missing value"); return }
-		n := NewNode(args[0], nil)
-		if q.tail != nil {
-			q.tail.Next = n
-		} else {
-			q.head = n
-		}
-		q.tail = n
-	case "QPOP":
-		if q.head == nil { fmt.Println("EMPTY"); return }
-		fmt.Println(q.head.Data)
-		q.head = q.head.Next
-		if q.head == nil { q.tail = nil }
+func (q *Queue) Push(val string) {
+	newNode := &QueueNode{Value: val}
+	if q.Tail != nil {
+		q.Tail.Next = newNode
+	} else {
+		q.Head = newNode
 	}
+	q.Tail = newNode
+}
+
+func (q *Queue) Pop() (string, error) {
+	if q.Head == nil {
+		return "", errors.New("queue is empty")
+	}
+	val := q.Head.Value
+	q.Head = q.Head.Next
+	if q.Head == nil {
+		q.Tail = nil // Очередь опустела
+	}
+	return val, nil
 }
 
 func (q *Queue) Print() {
-	fmt.Print("Queue (front -> back): ")
-	cur := q.head
-	for cur != nil {
-		fmt.Print(cur.Data, " ")
-		cur = cur.Next
+	fmt.Printf("Queue (front): ")
+	curr := q.Head
+	for curr != nil {
+		fmt.Printf("%s ", curr.Value)
+		curr = curr.Next
 	}
 	fmt.Println()
-}
-
-func (q *Queue) Save() string {
-	var vals []string
-	cur := q.head
-	for cur != nil {
-		vals = append(vals, cur.Data)
-		cur = cur.Next
-	}
-	return fmt.Sprintf("%d %s", len(vals), strings.Join(vals, " "))
-}
-
-func (q *Queue) Load(data string) {
-	q.head = nil
-	q.tail = nil
-	parts := strings.Fields(data)
-	if len(parts) == 0 { return }
-	var count int
-	fmt.Sscanf(parts[0], "%d", &count)
-	for i := 1; i <= count && i < len(parts); i++ {
-		q.Execute("QPUSH", []string{parts[i]})
-	}
 }
